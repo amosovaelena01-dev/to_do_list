@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мой планировщик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:             #F0EAD9;
+  --surface:        #FAF7F0;
+  --card:           #FFFFFF;
+  --text:           #1C1008;
+  --text-muted:     #9A8A78;
+  --text-light:     #C4B5A5;
+  --urgent:         #C4603A;
+  --urgent-bg:      #FDF0EB;
+  --secondary:      #C49A28;
+  --secondary-bg:   #FDF8EB;
+  --later:          #5A8A6A;
+  --later-bg:       #EEF5F0;
+  --border:         rgba(28,16,8,0.09);
+  --shadow:         0 2px 20px rgba(28,16,8,0.06);
+  --shadow-md:      0 6px 32px rgba(28,16,8,0.11);
+  --radius:         18px;
+  --radius-sm:      11px;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0 16px 72px;
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ─────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 0 28px;
+  gap: 6px;
+}
+
+.header-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.header-date {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ── MAIN RING ───────────────────────────────── */
+.main-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 6px 0 36px;
+  position: relative;
+}
+
+.main-ring-svg {
+  width: 148px;
+  height: 148px;
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 4px 14px rgba(28,16,8,0.08));
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--border);
+}
+
+.ring-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);
+}
+
+.ring-fill.main      { stroke: var(--urgent); }
+.ring-fill.urgent    { stroke: var(--urgent); }
+.ring-fill.secondary { stroke: var(--secondary); }
+.ring-fill.later     { stroke: var(--later); }
+
+.main-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.main-ring-percent {
+  font-family: 'Playfair Display', serif;
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  display: block;
+}
+
+.main-ring-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 5px;
+  display: block;
+}
+
+/* ── SMALL RINGS ROW ─────────────────────────── */
+.rings-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 36px;
+}
+
+.ring-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 22px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  border-top-width: 3px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ring-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.ring-card.urgent    { border-top-color: var(--urgent); }
+.ring-card.secondary { border-top-color: var(--secondary); }
+.ring-card.later     { border-top-color: var(--later); }
+
+.small-ring-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+}
+
+.small-ring-svg {
+  width: 76px;
+  height: 76px;
+  transform: rotate(-90deg);
+}
+
+.small-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.small-ring-percent {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+
+.ring-card-name {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ring-card-count {
+  font-size: 12px;
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+/* ── ADD FORM ────────────────────────────────── */
+.add-form {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.task-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 0;
+}
+
+.task-input::placeholder { color: var(--text-light); }
+
+.task-input:focus {
+  border-color: var(--urgent);
+  background: var(--surface);
+}
+
+.priority-select {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 34px 0 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  min-width: 130px;
+  transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A8A78' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.priority-select:focus { border-color: var(--urgent); }
+
+.add-btn {
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0 22px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.add-btn:hover  { background: var(--urgent); }
+.add-btn:active { transform: scale(0.96); }
+
+/* ── SECTIONS ────────────────────────────────── */
+.section {
+  margin-bottom: 28px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.section-dot.urgent    { background: var(--urgent); }
+.section-dot.secondary { background: var(--secondary); }
+.section-dot.later     { background: var(--later); }
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.section-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  color: var(--text-muted);
+  background: rgba(28,16,8,0.07);
+}
+
+/* ── TASK ITEMS ──────────────────────────────── */
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  transition: opacity 0.3s, box-shadow 0.2s, border-color 0.2s;
+  animation: taskIn 0.28s ease both;
+}
+
+@keyframes taskIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.task-item:hover { box-shadow: var(--shadow-md); }
+
+.task-item.urgent    { border-left-color: var(--urgent); }
+.task-item.secondary { border-left-color: var(--secondary); }
+.task-item.later     { border-left-color: var(--later); }
+
+.task-item.done {
+  opacity: 0.5;
+  background: var(--bg);
+  box-shadow: none;
+}
+
+/* Checkbox */
+.task-checkbox {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.22s, border-color 0.22s;
+  user-select: none;
+}
+
+.task-item.urgent    .task-checkbox { border-color: var(--urgent); }
+.task-item.secondary .task-checkbox { border-color: var(--secondary); }
+.task-item.later     .task-checkbox { border-color: var(--later); }
+
+.task-item.done.urgent    .task-checkbox { background: var(--urgent);    border-color: var(--urgent); }
+.task-item.done.secondary .task-checkbox { background: var(--secondary); border-color: var(--secondary); }
+.task-item.done.later     .task-checkbox { background: var(--later);     border-color: var(--later); }
+
+.checkmark {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+  transition: opacity 0.18s;
+  pointer-events: none;
+}
+
+.task-item.done .checkmark { opacity: 1; }
+
+/* Text */
+.task-text {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.45;
+  transition: color 0.25s, text-decoration 0.25s;
+}
+
+.task-item.done .task-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Delete */
+.task-delete {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: opacity 0.18s, background 0.18s, color 0.18s;
+}
+
+.task-item:hover .task-delete  { opacity: 1; }
+.task-delete:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* ── EMPTY STATE ─────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 18px 16px;
+  color: var(--text-light);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed rgba(28,16,8,0.12);
+}
+
+/* ── FOOTER ──────────────────────────────────── */
+.footer {
+  text-align: center;
+  margin-top: 52px;
+  color: var(--text-light);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+/* ── RESPONSIVE ──────────────────────────────── */
+@media (max-width: 500px) {
+  .form-row { flex-direction: column; }
+  .priority-select { min-width: 100%; padding: 12px 34px 12px 14px; }
+  .add-btn { padding: 12px; }
+  .header-date { font-size: 23px; }
+  .main-ring-percent { font-size: 28px; }
+  .rings-row { gap: 8px; }
+  .ring-card { padding: 16px 10px 14px; }
+  .small-ring-wrap { width: 64px; height: 64px; }
+  .small-ring-svg  { width: 64px; height: 64px; }
+  .small-ring-percent { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-eyebrow">Мой планировщик</div>
+    <div class="header-date" id="headerDate"></div>
+  </header>
+
+  <!-- MAIN RING -->
+  <div class="main-ring-wrap">
+    <svg class="main-ring-svg" viewBox="0 0 148 148">
+      <circle class="ring-track" cx="74" cy="74" r="58" stroke-width="11"/>
+      <circle class="ring-fill main" cx="74" cy="74" r="58"
+        id="mainRingFill"
+        stroke-width="11"
+        stroke-dasharray="364.4"
+        stroke-dashoffset="364.4"/>
+    </svg>
+    <div class="main-ring-center">
+      <span class="main-ring-percent" id="mainPercent">0%</span>
+      <span class="main-ring-label">выполнено</span>
+    </div>
+  </div>
+
+  <!-- SMALL RINGS -->
+  <div class="rings-row">
+
+    <div class="ring-card urgent">
+      <div class="small-ring-wrap">
+        <svg class="small-ring-svg" viewBox="0 0 76 76">
+          <circle class="ring-track" cx="38" cy="38" r="30" stroke-width="8"/>
+          <circle class="ring-fill urgent" cx="38" cy="38" r="30"
+            id="urgentRingFill"
+            stroke-width="8"
+            stroke-dasharray="188.5"
+            stroke-dashoffset="188.5"/>
+        </svg>
+        <div class="small-ring-center">
+          <div class="small-ring-percent" id="urgentPercent">0%</div>
+        </div>
+      </div>
+      <div class="ring-card-name">Срочно</div>
+      <div class="ring-card-count" id="urgentCount">0 / 0</div>
+    </div>
+
+    <div class="ring-card secondary">
+      <div class="small-ring-wrap">
+        <svg class="small-ring-svg" viewBox="0 0 76 76">
+          <circle class="ring-track" cx="38" cy="38" r="30" stroke-width="8"/>
+          <circle class="ring-fill secondary" cx="38" cy="38" r="30"
+            id="secondaryRingFill"
+            stroke-width="8"
+            stroke-dasharray="188.5"
+            stroke-dashoffset="188.5"/>
+        </svg>
+        <div class="small-ring-center">
+          <div class="small-ring-percent" id="secondaryPercent">0%</div>
+        </div>
+      </div>
+      <div class="ring-card-name">Важно</div>
+      <div class="ring-card-count" id="secondaryCount">0 / 0</div>
+    </div>
+
+    <div class="ring-card later">
+      <div class="small-ring-wrap">
+        <svg class="small-ring-svg" viewBox="0 0 76 76">
+          <circle class="ring-track" cx="38" cy="38" r="30" stroke-width="8"/>
+          <circle class="ring-fill later" cx="38" cy="38" r="30"
+            id="laterRingFill"
+            stroke-width="8"
+            stroke-dasharray="188.5"
+            stroke-dashoffset="188.5"/>
+        </svg>
+        <div class="small-ring-center">
+          <div class="small-ring-percent" id="laterPercent">0%</div>
+        </div>
+      </div>
+      <div class="ring-card-name">Потом</div>
+      <div class="ring-card-count" id="laterCount">0 / 0</div>
+    </div>
+
+  </div>
+
+  <!-- ADD FORM -->
+  <div class="add-form">
+    <div class="form-eyebrow">Новая задача</div>
+    <div class="form-row">
+      <input
+        type="text"
+        class="task-input"
+        id="taskInput"
+        placeholder="Что нужно сделать?"
+        maxlength="140"
+        autocomplete="off"
+      />
+      <select class="priority-select" id="prioritySelect">
+        <option value="urgent">🔴 Срочно</option>
+        <option value="secondary" selected>🟡 Важно</option>
+        <option value="later">🟢 Потом</option>
+      </select>
+      <button class="add-btn" id="addBtn">Добавить</button>
+    </div>
+  </div>
+
+  <!-- TASK SECTIONS -->
+  <div class="section" id="urgentSection">
+    <div class="section-header">
+      <div class="section-dot urgent"></div>
+      <div class="section-title">Срочно</div>
+      <div class="section-badge" id="urgentBadge">0</div>
+    </div>
+    <div class="tasks-list" id="urgentList"></div>
+  </div>
+
+  <div class="section" id="secondarySection">
+    <div class="section-header">
+      <div class="section-dot secondary"></div>
+      <div class="section-title">Важно</div>
+      <div class="section-badge" id="secondaryBadge">0</div>
+    </div>
+    <div class="tasks-list" id="secondaryList"></div>
+  </div>
+
+  <div class="section" id="laterSection">
+    <div class="section-header">
+      <div class="section-dot later"></div>
+      <div class="section-title">Потом</div>
+      <div class="section-badge" id="laterBadge">0</div>
+    </div>
+    <div class="tasks-list" id="laterList"></div>
+  </div>
+
+  <div class="footer">Задачи сохраняются в браузере</div>
+
+</div><!-- /container -->
+
+<script>
+// ── State ─────────────────────────────────────────────────
+const STORAGE_KEY = 'jarvis_todo_v1';
+let tasks = [];
+
+function load() {
+  try { tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { tasks = []; }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function esc(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Date ──────────────────────────────────────────────────
+function setDate() {
+  const d = new Date();
+  const days   = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const months = ['января','февраля','марта','апреля','мая','июня',
+                  'июля','августа','сентября','октября','ноября','декабря'];
+  document.getElementById('headerDate').textContent =
+    `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+// ── Ring helper ───────────────────────────────────────────
+function animateRing(fillId, circumference, pct) {
+  const el = document.getElementById(fillId);
+  el.style.strokeDashoffset = circumference * (1 - pct / 100);
+}
+
+// ── Update all rings ──────────────────────────────────────
+function updateRings() {
+  const g = { urgent: [], secondary: [], later: [] };
+  tasks.forEach(t => g[t.priority].push(t));
+
+  const pct = (done, total) => total === 0 ? 0 : Math.round(done / total * 100);
+
+  ['urgent', 'secondary', 'later'].forEach(p => {
+    const total = g[p].length;
+    const done  = g[p].filter(t => t.done).length;
+    const p_val = pct(done, total);
+
+    document.getElementById(p + 'Percent').textContent = p_val + '%';
+    document.getElementById(p + 'Count').textContent   = `${done} / ${total}`;
+    animateRing(p + 'RingFill', 188.5, p_val);
+  });
+
+  const total     = tasks.length;
+  const done      = tasks.filter(t => t.done).length;
+  const mainPct   = pct(done, total);
+  document.getElementById('mainPercent').textContent = mainPct + '%';
+  animateRing('mainRingFill', 364.4, mainPct);
+}
+
+// ── Render tasks ──────────────────────────────────────────
+function renderTasks() {
+  const PRIORITIES = ['urgent', 'secondary', 'later'];
+
+  PRIORITIES.forEach(p => {
+    const list  = document.getElementById(p + 'List');
+    const badge = document.getElementById(p + 'Badge');
+    const items = tasks.filter(t => t.priority === p);
+
+    badge.textContent = items.length;
+    list.innerHTML = '';
+
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state">Задач нет — добавь первую</div>';
+      return;
+    }
+
+    // показывать невыполненные сверху
+    const sorted = [...items].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+
+    sorted.forEach(task => {
+      const div = document.createElement('div');
+      div.className = `task-item ${p}${task.done ? ' done' : ''}`;
+      div.dataset.id = task.id;
+      div.innerHTML = `
+        <div class="task-checkbox" data-id="${task.id}">
+          <svg class="checkmark" viewBox="0 0 11 11" fill="none">
+            <path d="M1.5 5.5L4.2 8.2L9.5 2.8"
+              stroke="white" stroke-width="1.9"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="task-text">${esc(task.text)}</span>
+        <button class="task-delete" data-id="${task.id}" title="Удалить">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M1.5 1.5l10 10M11.5 1.5l-10 10"
+              stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          </svg>
+        </button>
+      `;
+      list.appendChild(div);
+    });
+  });
+
+  updateRings();
+}
+
+// ── Event delegation ──────────────────────────────────────
+document.querySelector('.container').addEventListener('click', e => {
+  const checkbox = e.target.closest('.task-checkbox');
+  const deleteBtn = e.target.closest('.task-delete');
+
+  if (checkbox) {
+    const id = checkbox.dataset.id;
+    const t  = tasks.find(x => x.id === id);
+    if (t) { t.done = !t.done; save(); renderTasks(); }
+  }
+
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.id;
+    tasks = tasks.filter(x => x.id !== id);
+    save();
+    renderTasks();
+  }
+});
+
+// ── Add task ──────────────────────────────────────────────
+function addTask() {
+  const input  = document.getElementById('taskInput');
+  const select = document.getElementById('prioritySelect');
+  const text   = input.value.trim();
+  if (!text) { input.focus(); return; }
+
+  tasks.push({
+    id:        uid(),
+    text,
+    priority:  select.value,
+    done:      false,
+    createdAt: Date.now(),
+  });
+
+  save();
+  renderTasks();
+  input.value = '';
+  input.focus();
+}
+
+document.getElementById('addBtn').addEventListener('click', addTask);
+document.getElementById('taskInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+// ── Init ──────────────────────────────────────────────────
+load();
+setDate();
+renderTasks();
+</script>
+
+</body>
+</html>
