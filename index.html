@@ -463,6 +463,40 @@ body {
   letter-spacing: 0.06em;
 }
 
+/* ── STREAK BADGE (перенос задачи на след. день) ─ */
+.task-streak {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(28,16,8,0.07);
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.task-streak.warn {
+  color: var(--urgent);
+  background: var(--urgent-bg);
+}
+
+/* ── REMINDERS TOGGLE ────────────────────────── */
+.reminders-btn {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.reminders-btn:hover:not(:disabled) { border-color: var(--urgent); color: var(--text); }
+.reminders-btn:disabled { opacity: 0.5; cursor: default; }
+
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 500px) {
   .form-row { flex-direction: column; }
@@ -612,14 +646,21 @@ body {
     <div class="tasks-list" id="laterList"></div>
   </div>
 
-  <div class="footer">Задачи сохраняются в браузере</div>
+  <div class="footer">
+    Задачи сохраняются в браузере
+    <div><button class="reminders-btn" id="remindersToggle">🔔 Включить напоминания</button></div>
+  </div>
 
 </div><!-- /container -->
 
 <script>
 // ── State ─────────────────────────────────────────────────
 const STORAGE_KEY = 'jarvis_todo_v1';
+const DATE_KEY = 'jarvis_todo_date_v1';
+const REMINDER_KEY = 'jarvis_todo_reminders_v1';
 let tasks = [];
+let remindersEnabled = localStorage.getItem(REMINDER_KEY) === 'on';
+let reminderTimer = null;
 
 function load() {
   try { tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -640,6 +681,106 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function declDays(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'день';
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'дня';
+  return 'дней';
+}
+
+// ── Перенос незавершённых задач на новый день ──────────────
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function carryOverTasks() {
+  const storedDate = localStorage.getItem(DATE_KEY);
+  const today = todayStr();
+
+  if (!storedDate) {
+    localStorage.setItem(DATE_KEY, today);
+    return;
+  }
+  if (storedDate === today) return;
+
+  const unfinished = tasks.filter(t => !t.done);
+  unfinished.forEach(t => { t.streak = (t.streak || 0) + 1; t.carried = true; });
+
+  tasks = unfinished;
+  localStorage.setItem(DATE_KEY, today);
+  save();
+
+  if (unfinished.length) {
+    const urgentCount = unfinished.filter(t => t.priority === 'urgent').length;
+    notify(
+      'Перенос задач на сегодня',
+      urgentCount
+        ? `${unfinished.length} задач перешло на сегодня, из них ${urgentCount} срочных`
+        : `${unfinished.length} незавершённых задач перешло на сегодня`
+    );
+  }
+}
+
+// ── Напоминания ─────────────────────────────────────────────
+function notify(title, body) {
+  if (!remindersEnabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  new Notification(title, { body });
+}
+
+function checkUrgentReminder() {
+  const unfinishedUrgent = tasks.filter(t => !t.done && t.priority === 'urgent');
+  if (unfinishedUrgent.length) {
+    notify('Есть незакрытые срочные задачи', `${unfinishedUrgent.length} срочных задач ещё не выполнено`);
+  }
+}
+
+function startReminderTimer() {
+  stopReminderTimer();
+  reminderTimer = setInterval(checkUrgentReminder, 60 * 60 * 1000);
+}
+
+function stopReminderTimer() {
+  if (reminderTimer) clearInterval(reminderTimer);
+  reminderTimer = null;
+}
+
+function updateReminderBtn() {
+  const btn = document.getElementById('remindersToggle');
+  if (!('Notification' in window)) {
+    btn.textContent = '🔕 Браузер не поддерживает уведомления';
+    btn.disabled = true;
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    btn.textContent = '🔕 Уведомления заблокированы в браузере';
+    btn.disabled = true;
+    return;
+  }
+  btn.textContent = remindersEnabled ? '🔔 Напоминания включены' : '🔕 Включить напоминания';
+}
+
+function toggleReminders() {
+  if (!('Notification' in window)) return;
+  if (remindersEnabled) {
+    remindersEnabled = false;
+    localStorage.setItem(REMINDER_KEY, 'off');
+    stopReminderTimer();
+    updateReminderBtn();
+    return;
+  }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      remindersEnabled = true;
+      localStorage.setItem(REMINDER_KEY, 'on');
+      startReminderTimer();
+      notify('Напоминания включены', 'Буду напоминать о незакрытых срочных задачах, пока вкладка открыта');
+    }
+    updateReminderBtn();
+  });
 }
 
 // ── Date ──────────────────────────────────────────────────
@@ -715,6 +856,7 @@ function renderTasks() {
           </svg>
         </div>
         <span class="task-text">${esc(task.text)}</span>
+        ${task.carried ? `<span class="task-streak${task.streak >= 3 ? ' warn' : ''}" title="Переносится ${task.streak} ${declDays(task.streak)} подряд">⟳ ${task.streak} ${declDays(task.streak)}</span>` : ''}
         <button class="task-delete" data-id="${task.id}" title="Удалить">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path d="M1.5 1.5l10 10M11.5 1.5l-10 10"
@@ -776,8 +918,14 @@ document.getElementById('taskInput').addEventListener('keydown', e => {
 
 // ── Init ──────────────────────────────────────────────────
 load();
+carryOverTasks();
 setDate();
 renderTasks();
+updateReminderBtn();
+document.getElementById('remindersToggle').addEventListener('click', toggleReminders);
+if (remindersEnabled && 'Notification' in window && Notification.permission === 'granted') {
+  startReminderTimer();
+}
 </script>
 
 </body>
